@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Smart Data Analyzer</title>
+    <style>
+        :root {
+            --ink: #172033;
+            --muted: #65718a;
+            --primary: #4f46e5;
+            --primary-dark: #3730a3;
+            --surface: #ffffff;
+            --background: #f3f5fb;
+            --border: #e4e8f1;
+            --success-bg: #ecfdf5;
+            --success-ink: #065f46;
+            --error-bg: #fff1f2;
+            --error-ink: #9f1239;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: radial-gradient(circle at top left, #e7eaff 0, transparent 34%), var(--background);
+            color: var(--ink);
+            min-height: 100vh;
+        }
+        .container { width: min(100% - 32px, 1000px); margin: 0 auto; padding: 48px 0 64px; }
+        header { text-align: center; margin-bottom: 30px; }
+        .eyebrow {
+            display: inline-block; padding: 7px 12px; border-radius: 999px;
+            background: #e8eaff; color: var(--primary-dark); font-size: 12px;
+            font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+        }
+        h1 { font-size: clamp(30px, 5vw, 46px); letter-spacing: -1.5px; margin: 14px 0 10px; }
+        header p { color: var(--muted); margin: 0 auto; max-width: 620px; line-height: 1.6; }
+        .panel {
+            background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+            padding: 26px; box-shadow: 0 16px 45px rgba(31, 42, 80, .07); margin-bottom: 22px;
+        }
+        h2 { font-size: 20px; margin: 0 0 8px; }
+        .hint { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 0 0 16px; }
+        textarea {
+            display: block; width: 100%; min-height: 118px; resize: vertical;
+            border: 1px solid #cfd5e3; border-radius: 12px; padding: 14px;
+            font: inherit; line-height: 1.6; color: var(--ink); outline: none;
+            transition: border .2s, box-shadow .2s;
+        }
+        textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,70,229,.12); }
+        button {
+            margin-top: 16px; border: 0; border-radius: 11px; padding: 13px 20px;
+            background: var(--primary); color: white; font: inherit; font-weight: 750;
+            cursor: pointer; transition: background .2s, transform .2s;
+        }
+        button:hover { background: var(--primary-dark); transform: translateY(-1px); }
+        .message { border-radius: 12px; padding: 14px 16px; margin-bottom: 20px; line-height: 1.5; }
+        .error { background: var(--error-bg); color: var(--error-ink); border: 1px solid #fecdd3; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 18px; }
+        .stat {
+            padding: 18px; border-radius: 14px; background: #f8f9ff;
+            border: 1px solid var(--border); min-width: 0;
+        }
+        .stat span { color: var(--muted); font-size: 13px; font-weight: 650; }
+        .stat strong { display: block; margin-top: 8px; font-size: clamp(20px, 3vw, 26px); overflow-wrap: anywhere; }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 18px; }
+        .detail {
+            padding: 18px; border: 1px solid var(--border); border-radius: 14px;
+            background: #fff;
+        }
+        .detail h3 { font-size: 15px; margin: 0 0 10px; }
+        .values { color: #35415a; line-height: 1.8; overflow-wrap: anywhere; font-size: 14px; }
+        .ai-panel { border-color: #dcdcff; background: linear-gradient(135deg, #fff, #f7f7ff); }
+        .ai-label { color: var(--primary); font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+        .ai-copy { color: #35415a; line-height: 1.75; white-space: pre-wrap; margin: 12px 0 0; }
+        footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 26px; }
+        @media (max-width: 650px) {
+            .container { padding-top: 30px; }
+            .panel { padding: 19px; }
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .detail-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 390px) { .stats { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <header>
+            <span class="eyebrow">Python · NumPy · Groq AI</span>
+            <h1>Mini Smart Data Analyzer</h1>
+            <p>Turn a simple list of numbers into useful statistics, then let AI explain what the results mean.</p>
+        </header>
+
+        <section class="panel">
+            <h2>Enter your data</h2>
+            <p class="hint">Enter at least 10 numbers. Separate each number with a comma.</p>
+            <form method="POST" action="/">
+                <textarea name="numbers" placeholder="Example: 12, 15, 18, 20, 22, 25, 28, 30, 32, 40" required>{{ raw_numbers }}</textarea>
+                <button type="submit">Analyze Data</button>
+            </form>
+        </section>
+
+        {% if error %}
+            <div class="message error" role="alert">{{ error }}</div>
+        {% endif %}
+
+        {% if results %}
+            <section class="panel">
+                <h2>Your numerical results</h2>
+                <p class="hint">Analysis completed for {{ results.count }} numbers.</p>
+                <div class="stats">
+                    <div class="stat"><span>Mean (average)</span><strong>{{ "%.2f"|format(results.mean) }}</strong></div>
+                    <div class="stat"><span>Median (middle)</span><strong>{{ "%.2f"|format(results.median) }}</strong></div>
+                    <div class="stat"><span>Maximum</span><strong>{{ "%.2f"|format(results.maximum) }}</strong></div>
+                    <div class="stat"><span>Minimum</span><strong>{{ "%.2f"|format(results.minimum) }}</strong></div>
+                    <div class="stat"><span>Sum (total)</span><strong>{{ "%.2f"|format(results.sum) }}</strong></div>
+                    <div class="stat"><span>Number of values</span><strong>{{ results.count }}</strong></div>
+                </div>
+                <div class="detail-grid">
+                    <div class="detail">
+                        <h3>Sorted values (smallest to largest)</h3>
+                        <div class="values">{{ results.sorted_values | join(", ") }}</div>
+                    </div>
+                    <div class="detail">
+                        <h3>Values above the mean</h3>
+                        <div class="values">
+                            {% if results.above_mean %}
+                                {{ results.above_mean | join(", ") }}
+                            {% else %}
+                                No values are above the mean.
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel ai-panel">
+                <span class="ai-label">Groq AI explanation</span>
+                <h2 style="margin-top: 8px;">What do these numbers tell us?</h2>
+                <p class="ai-copy">{{ ai_analysis }}</p>
+            </section>
+        {% endif %}
+
+        <footer>Mini Smart Data Analyzer · Built with Python and Flask</footer>
+    </main>
+</body>
+</html>
